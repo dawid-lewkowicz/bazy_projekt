@@ -19,6 +19,7 @@ model MenuItem {
   name        String
   description String?
   isAvailable Boolean    @default(true)
+  calories    Int?
   
   category    Category   @relation(fields: [categoryId], references: [id])
   variants    Variant[]

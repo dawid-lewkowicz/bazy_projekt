@@ -9,7 +9,21 @@ async function connectMongo() {
   await client.connect();
   db = client.db(); // Pobierze nazwę bazy z URI
   console.log("✅ Połączono z MongoDB Atlas");
+
+  // WYMÓG T5: Tworzenie indeksu złożonego z poziomu kodu
+  // Indeks na event_logs przyspieszający wyszukiwanie akcji konkretnego koszyka/sesji
+  await db.collection("event_logs").createIndex({ sessionId: 1, action: 1 });
+  console.log("✅ Utworzono indeksy MongoDB");
+
   return db;
 }
 
-module.exports = { connectMongo, client };
+// Dodana funkcja do zamykania zasobu
+async function closeMongo() {
+  if (client) {
+    await client.close();
+    console.log("🛑 Zamknięto połączenie z MongoDB");
+  }
+}
+
+module.exports = { connectMongo, closeMongo, client };
