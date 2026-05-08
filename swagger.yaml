@@ -1,0 +1,17 @@
+openapi: 3.0.0
+info:
+  title: Burger API
+  version: 1.0.0
+paths:
+  /carts/{sessionId}:
+    get:
+      summary: Pobiera koszyk po sessionId
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK

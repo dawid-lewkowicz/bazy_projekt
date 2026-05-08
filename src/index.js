@@ -6,6 +6,12 @@ const { connectMongo } = require("./config/mongo");
 const app = express();
 app.use(express.json());
 
+const swaggerUi = require("swagger-ui-express");
+const YAML = require("yamljs");
+const swaggerDocument = YAML.load("./swagger.yaml");
+
+// Udostępnienie Swaggera pod /api-docs
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 const cartRoutes = require("./routes/cartRoutes");
 app.use("/carts", cartRoutes);
 
@@ -87,10 +93,13 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, async () => {
-  await connectMongo();
-  console.log(`🚀 Serwer śmiga na http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    await connectMongo();
+    console.log(`🚀 Serwer śmiga na http://localhost:${PORT}`);
+  });
+}
+module.exports = app; // Eksport dla testów
 
 // WYMÓG T5: Zamknięcie przy SIGINT (oraz SIGTERM dla poprawności)
 async function gracefulShutdown() {
