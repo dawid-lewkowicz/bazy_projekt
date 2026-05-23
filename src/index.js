@@ -1,4 +1,6 @@
-// src/index.js
+// PostgreSQL do twardych stanów:stany magazynowe, menu
+// MongoDB do ulotnych stanów: koszyk z sesji i logi
+
 require("dotenv").config();
 const express = require("express");
 const swaggerUi = require("swagger-ui-express");
@@ -12,28 +14,20 @@ const setupGracefulShutdown = require("./utils/shutdown");
 const cartRoutes = require("./routes/cartRoutes");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const catalogRoutes = require("./routes/catalogRoutes");
 
 const app = express();
 app.use(express.json());
 
-// --- DOKUMENTACJA ---
+// dokumentacja - wizualny interface
 const swaggerDocument = YAML.load("./swagger.yaml");
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// --- ROUTING ---
+// routing
 app.use("/carts", cartRoutes);
 app.use("/checkout", checkoutRoutes);
 app.use("/analytics", analyticsRoutes);
-
-// Wymóg T2 / T4: Endpointy surowe i testowe na poziomie roota (opcjonalnie do przeniesienia do kontrolerów)
-app.get("/menu", async (req, res) => {
-  const { cat } = req.query;
-  const items = await prisma.menuItem.findMany({
-    where: cat ? { category: { name: cat } } : {},
-    include: { variants: true, modifiers: true },
-  });
-  res.json(items);
-});
+app.use("/menu", catalogRoutes);
 
 app.get("/orders/high-value", async (req, res, next) => {
   try {
@@ -41,6 +35,7 @@ app.get("/orders/high-value", async (req, res, next) => {
     if (isNaN(minAmount)) {
       return res.status(400).json({ error: "Parametr min musi być liczbą" });
     }
+    // $queryRaw + ${} zabezpiecza przed SQL Injection
     const bigOrders = await prisma.$queryRaw`
       SELECT id, status, "totalAmount", "createdAt" 
       FROM "Order" 
@@ -53,20 +48,22 @@ app.get("/orders/high-value", async (req, res, next) => {
   }
 });
 
-// --- OBSŁUGA BŁĘDÓW ---
+// obsługa błędów
 app.use(errorHandler);
 
-// --- INICJALIZACJA SERWERA ---
+// inicjalizacja serwera
 const PORT = process.env.PORT || 3000;
 
+// if żeby testy nie odpalały się na portcie 3000
 if (require.main === module) {
   const server = app.listen(PORT, async () => {
-    await connectMongo();
-    console.log(`🚀 Serwer śmiga na http://localhost:${PORT}`);
+    await connectMongo(); // połączenie się z MongoDB Atlas
+    console.log(`Serwer działa na porcie http://localhost:${PORT}`);
   });
 
-  // Podpięcie czystego wyłączania serwera
+  // miękkie wyłączenie serwera
   setupGracefulShutdown(server);
 }
 
+// cała konfiguracja (routing, errory, stawienia bazy) dla testów
 module.exports = app;

@@ -2,27 +2,25 @@ const { MongoClient } = require("mongodb");
 require("dotenv").config();
 
 const client = new MongoClient(process.env.MONGO_URI);
-let db = null;
+let db = null; //singleton
 
 async function connectMongo() {
-  if (db) return db;
+  if (db) return db; // singleton, jedna pula połączeń przez cały cykl życia serwera
   await client.connect();
-  db = client.db(); // Pobierze nazwę bazy z URI
-  console.log("✅ Połączono z MongoDB Atlas");
+  db = client.db(); // pobiera nazwę bazy z URI
+  console.log(" Połączono z MongoDB Atlas");
 
-  // WYMÓG T5: Tworzenie indeksu złożonego z poziomu kodu
-  // Indeks na event_logs przyspieszający wyszukiwanie akcji konkretnego koszyka/sesji
+  // system MongoDB układa sobie logi alfabetycznie na podstawie numeru sesji, szybkość wyszukiwania drastycznie wzrasta
   await db.collection("event_logs").createIndex({ sessionId: 1, action: 1 });
-  console.log("✅ Utworzono indeksy MongoDB");
+  console.log(" Utworzono indeksy MongoDB");
 
   return db;
 }
 
-// Dodana funkcja do zamykania zasobu
 async function closeMongo() {
   if (client) {
     await client.close();
-    console.log("🛑 Zamknięto połączenie z MongoDB");
+    console.log(" Zamknięto połączenie z MongoDB");
   }
 }
 

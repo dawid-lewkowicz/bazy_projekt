@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const cartService = require("../services/cartService");
 
+// zwraca obecny stan koszyka
 router.get("/:sessionId", async (req, res, next) => {
   try {
     const cart = await cartService.getCart(req.params.sessionId);
@@ -11,6 +12,7 @@ router.get("/:sessionId", async (req, res, next) => {
   }
 });
 
+// dodawanie elementów do koszyka
 router.post("/:sessionId/items", async (req, res, next) => {
   try {
     const cart = await cartService.addItemToCart(
@@ -23,7 +25,7 @@ router.post("/:sessionId/items", async (req, res, next) => {
   }
 });
 
-// NOWY ENDPOINT: Usuwanie produktu z koszyka
+// usuwanie produktu z koszyka
 router.delete("/:sessionId/items/:sku", async (req, res, next) => {
   try {
     const cart = await cartService.removeItemFromCart(

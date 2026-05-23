@@ -4,7 +4,8 @@ const analyticsService = require("../services/analyticsService");
 
 router.get("/stats", async (req, res, next) => {
   try {
-    const stats = await analyticsService.getActionStats();
+    const { sessionId } = req.query;
+    const stats = await analyticsService.getActionStats(sessionId);
     res.json(stats);
   } catch (err) {
     next(err);

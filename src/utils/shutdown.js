@@ -1,4 +1,3 @@
-// src/utils/shutdown.js
 const prisma = require("../config/postgres");
 const { closeMongo } = require("../config/mongo");
 
@@ -9,23 +8,23 @@ function setupGracefulShutdown(server) {
     );
 
     server.close(async () => {
-      console.log("Serwer HTTP zamknięty.");
+      console.log(" Serwer HTTP zamknięty.");
 
       try {
         await closeMongo();
         await prisma.$disconnect();
-        console.log("🛑 Zamknięto połączenie z PostgreSQL");
+        console.log(" Zamknięto połączenie z PostgreSQL i MongoDB");
 
-        console.log("Zakończono czyszczenie zasobów. Wychodzę z kodem 0.");
+        console.log(" Pomyślnie zakończono czyszczenie zasobów");
         process.exit(0);
       } catch (err) {
-        console.error("Błąd podczas zamykania zasobów", err);
+        console.error(" Błąd podczas zamykania zasobów", err);
         process.exit(1);
       }
     });
 
     setTimeout(() => {
-      console.error("Wymuszam zamknięcie po 10 sekundach (timeout).");
+      console.error(" Wymuszam zamknięcie po 10 sekundach (timeout).");
       process.exit(1);
     }, 10000);
   }

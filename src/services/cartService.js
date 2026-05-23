@@ -33,7 +33,6 @@ async function addItemToCart(sessionId, item) {
   return getCart(sessionId);
 }
 
-// NOWA FUNKCJA: Wyrzucanie produktu z koszyka
 async function removeItemFromCart(sessionId, variantSku) {
   const db = client.db();
 

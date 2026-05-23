@@ -1,5 +1,3 @@
-// src/middlewares/errorHandler.js
-
 function errorHandler(err, req, res, next) {
   console.error("Wykryto błąd:", err.message);
 

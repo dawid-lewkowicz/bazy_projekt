@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const checkoutService = require("../services/checkoutService");
 
+// finalizacja transakcji
 router.post("/:sessionId", async (req, res, next) => {
   try {
     const order = await checkoutService.processCheckout(req.params.sessionId);
@@ -10,7 +11,6 @@ router.post("/:sessionId", async (req, res, next) => {
     if (err.message.includes("Koszyk jest pusty")) {
       return res.status(400).json({ error: err.message });
     }
-    // NOWE: Przechwycenie błędu magazynu i rzucenie HTTP 409
     if (err.message.includes("OVERSELL")) {
       return res.status(409).json({ error: err.message });
     }

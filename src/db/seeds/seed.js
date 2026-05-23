@@ -1,7 +1,7 @@
 const prisma = require("../../config/postgres");
 
 async function main() {
-  // Czyścimy bazę przed seedowaniem
+  // czyścimy bazę przed seedowaniem
   await prisma.modifier.deleteMany();
   await prisma.variant.deleteMany();
   await prisma.menuItem.deleteMany();
@@ -28,7 +28,7 @@ async function main() {
     },
   });
 
-  console.log("🌱 Baza danych została nakarmiona!");
+  console.log(" Baza danych została wypełniona");
 }
 
 main()

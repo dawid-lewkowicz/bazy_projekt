@@ -4,7 +4,7 @@ const { client } = require("../config/mongo");
 async function processCheckout(sessionId) {
   const db = client.db();
 
-  // Zabezpieczenie: Idempotencja
+  // idempotencja, nie można wysłać tego samego żądania kilka razy
   const recentCheckout = await db.collection("event_logs").findOne({
     sessionId: sessionId,
     action: "CHECKOUT_COMPLETED",
@@ -12,7 +12,6 @@ async function processCheckout(sessionId) {
   });
 
   if (recentCheckout) {
-    // TWARDA REGULA: Zawsze rzucaj instancją Error!
     const err = new Error(
       "To zamówienie jest już w trakcie przetwarzania lub zostało ukończone.",
     );
@@ -32,9 +31,8 @@ async function processCheckout(sessionId) {
     0,
   );
 
-  // KROK 1: Izolowana transakcja w PostgreSQL (Tylko operacje relacyjne)
   const order = await prisma.$transaction(async (tx) => {
-    // Blokada oversell
+    // blokada oversell
     for (const item of cart.items) {
       const variant = await tx.variant.findUnique({
         where: { sku: item.variantSku },
@@ -42,19 +40,19 @@ async function processCheckout(sessionId) {
 
       if (!variant || variant.stock < item.quantity) {
         const err = new Error(
-          `OVERSELL: Brak produktu ${item.variantSku} w magazynie! Zostało: ${variant?.stock || 0}`,
+          `OVERSELL: Brak produktu ${item.variantSku} w magazynie. Zostało: ${variant?.stock || 0}`,
         );
         err.code = "DOMAIN_OVERSELL";
         throw err;
       }
 
+      //odejmowanie ze stanu magazynowego
       await tx.variant.update({
         where: { sku: item.variantSku },
         data: { stock: { decrement: item.quantity } },
       });
     }
 
-    // Utworzenie zamówienia ze snapshotem
     return await tx.order.create({
       data: {
         totalAmount: totalAmount,
@@ -71,7 +69,6 @@ async function processCheckout(sessionId) {
     });
   });
 
-  // KROK 2: Próba zapisu i sprzątania w Mongo + Kompensacja (Wymóg S5)
   try {
     const deleteResult = await db
       .collection("cart_drafts")
@@ -87,21 +84,16 @@ async function processCheckout(sessionId) {
       timestamp: new Date(),
     });
   } catch (mongoError) {
-    // KOMPENSACJA: Operacja w Mongo się nie powiodła po skutecznym commitowaniu w PG.
-    // Musimy wycofać zmiany w relacyjnej bazie, aby utrzymać spójność systemu.
-    console.error(
-      "Krytyczny błąd spójności! Uruchamiam kompensację w PG...",
-      mongoError,
-    );
+    // kompensacja: operacja w Mongo się nie powiodła, musimy wycofać zmiany z Postgre, aby utrzymac spójność systemu
+    console.error("Błąd spójności! Uruchamiam kompensację", mongoError);
 
     await prisma.$transaction(async (tx) => {
-      // 1. Zmiana statusu zamówienia na usterkę systemową
       await tx.order.update({
         where: { id: order.id },
         data: { status: "FAILED_SYSTEM_ERROR" },
       });
 
-      // 2. Oddanie towaru z powrotem na stan magazynowy
+      // oddanie towaru do stanu magazynowego
       for (const item of cart.items) {
         await tx.variant.update({
           where: { sku: item.variantSku },
@@ -111,7 +103,7 @@ async function processCheckout(sessionId) {
     });
 
     const err = new Error(
-      "Błąd spójności pomiędzy bazami danych. Zamówienie wycofane, środki nie zostały pobrane.",
+      "Błąd spójności pomiędzy bazami danych. Zamówienie wycofane",
     );
     err.code = "COMPENSATED_TRANSACTION_ERROR";
     throw err;
