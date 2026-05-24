@@ -1,0 +1,38 @@
+Singledon, zapytania parametryzowane, mapowanie kodów
+config/postgres.js   index.js   middlewares/errorHandler.js
+
+Wyłączenie przez migracje, seedy, dynamiczny where
+db/seeds/seed.js  routes/catalogRoutes.js
+
+Eager loading, transakcja zarządzana, walidacja, relacje
+prisma/schema.prisma   routes/catalogRoutes.js   services/checkoutService.js
+
+Historia migracji, queryRaw, 
+prisma/schema.prisma   index.js
+
+Singleton MongoClient, indeks złożony, zamknięcie
+config/mongo.js   utils/shutdown.js   services/analyticsService.js
+
+Pipeline match group project, endpoint analityczny
+services/analyticsService.js   routes/analyticsRoutes.js
+
+Operacja zapisu z rollback, jednolity format błędów
+services/checkoutService.js   middlewares/errorHandler.js
+
+OpenAPI
+swagger.yaml
+
+Testy
+tests/api.test.js
+
+PostgreSQL
+prisma/schema.prisma   services/checkoutService(logika zatwierdzania obydwu stanów)
+
+MongoDB
+services/checkoutService.js(poszukiwanie obiektu cart_drafts, generowanie wpisów event_logs)
+services/analyticsService.js(analiza eventów)
+
+Niedostępna pozycja lub przekroczony limit
+middlewares/errorHandler.js   schema.prisma(priceSnapshot)
+
+Finalizacja zamówienia services/checkoutServices.js

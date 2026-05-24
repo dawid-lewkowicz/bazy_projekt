@@ -32,38 +32,54 @@ async function processCheckout(sessionId) {
   );
 
   const order = await prisma.$transaction(async (tx) => {
+    let secureTotalAmount = 0;
+    const orderLinesData = [];
+
     // blokada oversell
     for (const item of cart.items) {
+      // pobieramy aktualną, autoryzowaną cenę prosto z Postgre
       const variant = await tx.variant.findUnique({
         where: { sku: item.variantSku },
       });
 
-      if (!variant || variant.stock < item.quantity) {
+      if (!variant) {
+        const err = new Error(`Produkt ${item.variantSku} nie istnieje.`);
+        err.code = "VARIANT_NOT_FOUND";
+        throw err;
+      }
+
+      secureTotalAmount += variant.price * item.quantity;
+
+      const updateResult = await tx.variant.updateMany({
+        where: {
+          sku: item.variantSku,
+          stock: { gte: item.quantity },
+        },
+        data: { stock: { decrement: item.quantity } },
+      });
+
+      if (updateResult.count === 0) {
         const err = new Error(
-          `OVERSELL: Brak produktu ${item.variantSku} w magazynie. Zostało: ${variant?.stock || 0}`,
+          `OVERSELL: Brak wystarczającej ilości produktu ${item.variantSku} w magazynie`,
         );
         err.code = "DOMAIN_OVERSELL";
         throw err;
       }
 
-      //odejmowanie ze stanu magazynowego
-      await tx.variant.update({
-        where: { sku: item.variantSku },
-        data: { stock: { decrement: item.quantity } },
+      orderLinesData.push({
+        variantSku: item.variantSku,
+        nameSnapshot: `Produkt ${item.variantSku}`,
+        priceSnapshot: variant.price,
+        quantity: item.quantity,
       });
     }
 
     return await tx.order.create({
       data: {
-        totalAmount: totalAmount,
+        totalAmount: secureTotalAmount,
         status: "PAID",
         lines: {
-          create: cart.items.map((item) => ({
-            variantSku: item.variantSku,
-            nameSnapshot: `Produkt ${item.variantSku}`,
-            priceSnapshot: item.price,
-            quantity: item.quantity,
-          })),
+          create: orderLinesData,
         },
       },
     });

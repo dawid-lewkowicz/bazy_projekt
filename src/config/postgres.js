@@ -20,7 +20,6 @@ const prisma = prismaBase.$extends({
           args.data.sku = args.data.sku.toUpperCase().trim();
         }
 
-        // ostateczne wysłanie do bazy danych
         return query(args);
       },
       async update({ args, query }) {

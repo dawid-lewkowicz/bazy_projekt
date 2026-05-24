@@ -15,7 +15,7 @@ async function getActionStats(sessionId) {
   }
 
   pipeline.push(
-    // $lookup - dołączenie danych z innej kolekcji (relacja w NoSQL)
+    // $lookup -- dołączenie danych z innej kolekcji
     {
       $lookup: {
         from: "cart_drafts",

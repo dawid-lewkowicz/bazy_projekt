@@ -1,17 +1,163 @@
 openapi: 3.0.0
 info:
-  title: Burger API
+  title: Burger API - System Zamówień
   version: 1.0.0
+  description: Kompletny kontrakt API dla restauracji. Obsługuje architekturę CQRS (odczyty z Postgresa, logi w MongoDB, hybrydowy checkout).
+servers:
+  - url: http://localhost:3000
+    description: Lokalny serwer
 paths:
-  /carts/{sessionId}:
+  /menu:
     get:
-      summary: Pobiera koszyk po sessionId
+      summary: Pobiera pełne menu restauracji (Katalog)
+      description: Zwraca listę wszystkich dostępnych burgerów wraz z ich wariantami (SKU, cena, stock) i modyfikatorami. Zapytanie Read-Only.
+      tags:
+        - Catalog
+      responses:
+        "200":
+          description: Pomyślnie pobrano menu
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MenuItem"
+        "500":
+          description: Wewnętrzny błąd bazy danych
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkout/{sessionId}:
+    post:
+      summary: Finalizuje zamówienie (Atomowa transakcja)
+      description: Atomowo zdejmuje towar ze stanu w relacyjnej bazie (Postgres) oraz czyści koszyk w chmurze (MongoDB). Posiada wbudowaną obsługę kompensacji i blokadę idempotencji. Wymaga istniejącego koszyka w bazie Mongo.
+      tags:
+        - Checkout
       parameters:
         - in: path
           name: sessionId
           required: true
           schema:
             type: string
+          description: Unikalny identyfikator sesji klienta
       responses:
         "200":
-          description: OK
+          description: Zamówienie opłacone pomyślnie i zapisane w systemie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderSuccess"
+        "400":
+          description: Błąd walidacji biznesowej (np. koszyk jest pusty)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Konflikt domenowy (OVERSELL - brak towaru na stanie lub IDEMPOTENCY_CONFLICT - zapłacono w ciągu ostatnich 5 minut)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analytics/stats:
+    get:
+      summary: Pobiera zaawansowane statystyki akcji (Aggregation Pipeline)
+      description: Wykonuje wieloetapową agregację w MongoDB. Oblicza częstotliwość zdarzeń i łączy je z aktywnymi koszykami.
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: sessionId
+          schema:
+            type: string
+          required: false
+          description: Jeśli podane, zawęża statystyki do konkretnego klienta (wykorzystuje Index Scan). Jeśli puste - robi statystyki globalne.
+      responses:
+        "200":
+          description: Pomyślnie wygenerowano raport analityczny
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsResponse"
+
+components:
+  schemas:
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Classic Burger"
+        description:
+          type: string
+          example: "Najlepszy burger wołowy w mieście."
+        isAvailable:
+          type: boolean
+          example: true
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Variant"
+
+    Variant:
+      type: object
+      properties:
+        sku:
+          type: string
+          example: "BUR-CL-MA"
+        price:
+          type: number
+          format: float
+          example: 25.50
+        stock:
+          type: integer
+          example: 15
+
+    OrderSuccess:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 104
+        status:
+          type: string
+          example: "PAID"
+        totalAmount:
+          type: number
+          format: float
+          example: 45.50
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        actionType:
+          type: string
+          example: "CHECKOUT_COMPLETED"
+        totalEvents:
+          type: integer
+          example: 142
+        lastSeenAt:
+          type: string
+          format: date-time
+          example: "2026-05-24T14:30:00Z"
+        cartsStillOpen:
+          type: integer
+          example: 12
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "CART_EMPTY"
+        error:
+          type: string
+          example: "Koszyk jest pusty lub nie istnieje."

@@ -12,4 +12,23 @@ router.get("/stats", async (req, res, next) => {
   }
 });
 
+router.get("/orders/high-value", async (req, res, next) => {
+  try {
+    const minAmount = req.query.min ? Number(req.query.min) : 50;
+    if (isNaN(minAmount)) {
+      return res.status(400).json({ error: "Parametr min musi być liczbą" });
+    }
+    // $queryRaw + ${} zabezpiecza przed SQL Injection
+    const bigOrders = await prisma.$queryRaw`
+      SELECT id, status, "totalAmount", "createdAt" 
+      FROM "Order" 
+      WHERE "totalAmount" >= ${minAmount} AND status = 'PAID'
+      ORDER BY "totalAmount" DESC
+    `;
+    res.json(bigOrders);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

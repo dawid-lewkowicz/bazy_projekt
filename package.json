@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest --detectOpenHandles --forceExit"
+    "start": "node src/index.js",
+    "test": "jest",
+    "seed": "node src/db/seeds/seed.js"
   },
   "keywords": [],
   "author": "",
