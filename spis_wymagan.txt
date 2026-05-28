@@ -1,38 +1,43 @@
-Singledon, zapytania parametryzowane, mapowanie kodów
-config/postgres.js   index.js   middlewares/errorHandler.js
+T1 -sterownik pg❌, pula połączeń singleton[postgres.js]✅, zapytania parametryzowane($1, $2)[$queryRaw w analyticsRoutes.js]✅, mapowanie kodów błędów✅
 
-Wyłączenie przez migracje, seedy, dynamiczny where
-db/seeds/seed.js  routes/catalogRoutes.js
+T2 - Knex❌, schemat przez migracje✅, seedy✅, dynamiczny where[catalogRoutes.js]✅
 
-Eager loading, transakcja zarządzana, walidacja, relacje
-prisma/schema.prisma   routes/catalogRoutes.js   services/checkoutService.js
+T3 - Sequelize❌, 2 modele z walidacja(@uniquie i @db.Decimal)[schema.prosma]✅, eager loading[catalogRoutes.js]✅, 
+hook domenowy[postgres.js]✅, transakcja zarządana($transaction)[checkoutService.js]✅
 
-Historia migracji, queryRaw, 
-prisma/schema.prisma   index.js
+T4 - Prisma✅, modele z realcjami(np. między Order a OrderLines)[schema.prisma]✅, migracje✅, CRUD[checkoutService.js, catalogRoutes.js]✅
+$queryRaw[analyticsRoutes.js]✅
 
-Singleton MongoClient, indeks złożony, zamknięcie
-config/mongo.js   utils/shutdown.js   services/analyticsService.js
+T5 - Mongo✅, singleton[mogno.js]✅, SIGINT✅, zasób domenowy sterownikiem natywnym["cart_drafts" w MongoDB]✅, operatory($gte, $match, $group)[checkoutService.js]✅
+indeks złożony(mongo.js)✅
 
-Pipeline match group project, endpoint analityczny
-services/analyticsService.js   routes/analyticsRoutes.js
+T6 - Mongoose❌, schematy z walidatorami❌, tablica zagnieżdżona(mam tablicę obiektów w "cart_drafts")✅, pre hook❌, populate❌, methods❌
 
-Operacja zapisu z rollback, jednolity format błędów
-services/checkoutService.js   middlewares/errorHandler.js
+T7 - Pipeline✅, endpoint analityczny[analyticsRoutes.js]✅, cały pipeline[analyticsService.js]✅
 
-OpenAPI
-swagger.yaml
+T8a - Konteneryzacja❌
 
-Testy
-tests/api.test.js
+T8b - Mikroserwisy❌
 
-PostgreSQL
-prisma/schema.prisma   services/checkoutService(logika zatwierdzania obydwu stanów)
+T8c - Architektura hybrydowa✅, operacja zapisu z kompensacją[checkoutService.js]✅, jednolity format błędów✅
 
-MongoDB
-services/checkoutService.js(poszukiwanie obiektu cart_drafts, generowanie wpisów event_logs)
-services/analyticsService.js(analiza eventów)
+README✅
 
-Niedostępna pozycja lub przekroczony limit
-middlewares/errorHandler.js   schema.prisma(priceSnapshot)
+OpenAPI✅
 
-Finalizacja zamówienia services/checkoutServices.js
+Testy automatyczne✅
+
+Bezpieczeństwo podstawowe✅
+
+Model relacyjny: menu, warianty, zamówienia✅
+
+Model dokumentowy✅
+
+API: katalog, koszyk finalizacja✅
+
+Reguły biznesowe✅
+
+Operacja hybrydowa✅
+
+
+Przejść przez wymagania specyficzne dla projektu i przygotować testy w Thunder client itp.

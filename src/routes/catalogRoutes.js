@@ -18,4 +18,20 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+router.get("/desc", async (req, res, next) => {
+  try {
+    const desc = await prisma.variant.findMany({
+      select: {
+        desc: true,
+      },
+    });
+
+    const descriptions = desc.map((v) => v.desc);
+
+    res.json(descriptions);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

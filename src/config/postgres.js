@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 
+//singleton
 const prismaBase = new PrismaClient();
 
 // rozszerzony klient z hookami domenowymi i walidacją
