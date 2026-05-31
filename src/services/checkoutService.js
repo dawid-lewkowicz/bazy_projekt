@@ -1,22 +1,31 @@
 const prisma = require("../config/postgres");
 const { client } = require("../config/mongo");
 
-async function processCheckout(sessionId) {
+async function processCheckout(sessionId, expectedTotal, idempotencyKey) {
   const db = client.db();
 
-  // idempotencja, nie można wysłać tego samego żądania kilka razy
-  const recentCheckout = await db.collection("event_logs").findOne({
-    sessionId: sessionId,
-    action: "CHECKOUT_COMPLETED",
-    timestamp: { $gte: new Date(Date.now() - 5 * 60000) },
-  });
+  // idempotencja
+  if (idempotencyKey) {
+    const existingCheckout = await db.collection("event_logs").findOne({
+      idempotencyKey,
+      action: "CHECKOUT_COMPLETED",
+    });
 
-  if (recentCheckout) {
-    const err = new Error(
-      "To zamówienie jest już w trakcie przetwarzania lub zostało ukończone.",
-    );
-    err.code = "IDEMPOTENCY_CONFLICT";
-    throw err;
+    if (existingCheckout) {
+      const existingOrder = await prisma.order.findUnique({
+        where: { id: existingCheckout.orderId },
+      });
+
+      if (existingOrder) {
+        return existingOrder;
+      }
+
+      const err = new Error(
+        "Żądanie zostało już wcześniej przetworzone, ale nie udało się odnaleźć zamówienia.",
+      );
+      err.code = "IDEMPOTENCY_CONFLICT";
+      throw err;
+    }
   }
 
   const cart = await db.collection("cart_drafts").findOne({ sessionId });
@@ -74,6 +83,17 @@ async function processCheckout(sessionId) {
       });
     }
 
+    if (expectedTotal !== undefined && expectedTotal !== null) {
+      const expected = Number(expectedTotal);
+      if (Number.isNaN(expected) || Number(secureTotalAmount) !== expected) {
+        const err = new Error(
+          "Ceny produktów uległy zmianie w trakcie konfiguracji zamówienia. Odśwież koszyk.",
+        );
+        err.code = "PRICE_MISMATCH";
+        throw err;
+      }
+    }
+
     return await tx.order.create({
       data: {
         totalAmount: secureTotalAmount,
@@ -95,12 +115,12 @@ async function processCheckout(sessionId) {
 
     await db.collection("event_logs").insertOne({
       sessionId,
+      idempotencyKey: idempotencyKey || null,
       action: "CHECKOUT_COMPLETED",
       orderId: order.id,
       timestamp: new Date(),
     });
   } catch (mongoError) {
-    // kompensacja: operacja w Mongo się nie powiodła, musimy wycofać zmiany z Postgre, aby utrzymac spójność systemu
     console.error("Błąd spójności! Uruchamiam kompensację", mongoError);
 
     await prisma.$transaction(async (tx) => {

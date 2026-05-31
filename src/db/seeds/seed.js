@@ -1,13 +1,13 @@
 const prisma = require("../../config/postgres");
 
-async function main() {
+async function seedDatabase() {
   // czyścimy bazę przed seedowaniem
   await prisma.modifier.deleteMany();
   await prisma.variant.deleteMany();
   await prisma.menuItem.deleteMany();
   await prisma.category.deleteMany();
 
-  const burgerCat = await prisma.category.create({
+  await prisma.category.create({
     data: {
       name: "Burgery",
       items: {
@@ -49,7 +49,7 @@ async function main() {
     },
   });
 
-  const inneCat = await prisma.category.create({
+  await prisma.category.create({
     data: {
       name: "Inne",
       items: {
@@ -71,6 +71,14 @@ async function main() {
   console.log(" Baza danych została wypełniona");
 }
 
-main()
-  .catch((e) => console.error(e))
-  .finally(async () => await prisma.$disconnect());
+async function main() {
+  await seedDatabase();
+}
+
+if (require.main === module) {
+  main()
+    .catch((e) => console.error(e))
+    .finally(async () => await prisma.$disconnect());
+}
+
+module.exports = { seedDatabase };

@@ -1,7 +1,21 @@
+require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  `postgresql://${process.env.POSTGRES_USER || "user"}:${process.env.POSTGRES_PASSWORD || "password"}@${process.env.POSTGRES_HOST || "localhost"}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DB || "bazy_projekt"}?schema=public`;
+
+console.log("=== INICJALIZACJA PRISMA ===");
+console.log("DATABASE_URL z procesu Dockera:", databaseUrl);
+
 //singleton
-const prismaBase = new PrismaClient();
+const prismaBase = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseUrl,
+    },
+  },
+});
 
 // rozszerzony klient z hookami domenowymi i walidacją
 const prisma = prismaBase.$extends({

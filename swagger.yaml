@@ -10,9 +10,16 @@ paths:
   /menu:
     get:
       summary: Pobiera pełne menu restauracji (Katalog)
-      description: Zwraca listę wszystkich dostępnych burgerów wraz z ich wariantami (SKU, cena, stock) i modyfikatorami. Zapytanie Read-Only.
+      description: Zwraca listę wszystkich dostępnych burgerów wraz z ich wariantami (SKU, cena, stock) i modyfikatorami. Umożliwia filtrowanie po kategorii.
       tags:
         - Catalog
+      parameters:
+        - in: query
+          name: cat
+          schema:
+            type: string
+          required: false
+          description: Nazwa kategorii do przefiltrowania (np. "Burgery")
       responses:
         "200":
           description: Pomyślnie pobrano menu
@@ -29,10 +36,109 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /menu/desc:
+    get:
+      summary: Pobiera opisy wszystkich wariantów
+      description: Wyciąga tablicę samych opisów wariantów (desc) z tabeli Variant.
+      tags:
+        - Catalog
+      responses:
+        "200":
+          description: Pomyślnie pobrano opisy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "Najlepszy w mieście"
+
+  /carts/{sessionId}:
+    get:
+      summary: Pobiera aktywny koszyk
+      description: Zwraca aktualny stan koszyka dla danej sesji z bazy MongoDB. Jeśli nie istnieje, tworzy nowy.
+      tags:
+        - Cart
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+          description: Unikalny identyfikator sesji klienta
+      responses:
+        "200":
+          description: Pomyślnie pobrano koszyk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /carts/{sessionId}/items:
+    post:
+      summary: Dodaje pozycję do koszyka
+      description: Zwiększa ilość produktu w koszyku lub dodaje nowy wariant w bazie MongoDB na podstawie aktualnych cen z PostgreSQL. Zapisuje log operacji.
+      tags:
+        - Cart
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variantSku
+                - quantity
+              properties:
+                variantSku:
+                  type: string
+                  example: "BUR-CL-MA"
+                quantity:
+                  type: integer
+                  example: 1
+      responses:
+        "200":
+          description: Zaktualizowany koszyk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /carts/{sessionId}/items/{sku}:
+    delete:
+      summary: Zmniejsza ilość lub usuwa produkt z koszyka
+      description: Odejmuje 1 od ilości danego SKU. Jeśli ilość spadnie do 0, pozycja jest usuwana z koszyka.
+      tags:
+        - Cart
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Zaktualizowany koszyk po usunięciu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
   /checkout/{sessionId}:
     post:
       summary: Finalizuje zamówienie (Atomowa transakcja)
-      description: Atomowo zdejmuje towar ze stanu w relacyjnej bazie (Postgres) oraz czyści koszyk w chmurze (MongoDB). Posiada wbudowaną obsługę kompensacji i blokadę idempotencji. Wymaga istniejącego koszyka w bazie Mongo.
+      description: Atomowo zdejmuje towar ze stanu w relacyjnej bazie (Postgres) oraz czyści koszyk w chmurze (MongoDB). Posiada wbudowaną obsługę kompensacji i blokadę idempotencji.
       tags:
         - Checkout
       parameters:
@@ -56,7 +162,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Konflikt domenowy (OVERSELL - brak towaru na stanie lub IDEMPOTENCY_CONFLICT - zapłacono w ciągu ostatnich 5 minut)
+          description: Konflikt domenowy (OVERSELL lub IDEMPOTENCY_CONFLICT)
           content:
             application/json:
               schema:
@@ -74,7 +180,7 @@ paths:
           schema:
             type: string
           required: false
-          description: Jeśli podane, zawęża statystyki do konkretnego klienta (wykorzystuje Index Scan). Jeśli puste - robi statystyki globalne.
+          description: Jeśli podane, zawęża statystyki do konkretnego klienta. Jeśli puste - robi statystyki globalne.
       responses:
         "200":
           description: Pomyślnie wygenerowano raport analityczny
@@ -84,6 +190,35 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AnalyticsResponse"
+
+  /analytics/orders/high-value:
+    get:
+      summary: Pobiera opłacone zamówienia o wysokiej wartości (Raw SQL)
+      description: Endpoint analityczny korzystający z bezpiecznego surowego zapytania SQL, aby wyciągnąć zamówienia powyżej zadanego limitu.
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: min
+          schema:
+            type: number
+          required: false
+          description: Minimalna kwota zamówienia (domyślnie 50)
+      responses:
+        "200":
+          description: Lista wartościowych zamówień
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HighValueOrder"
+        "400":
+          description: Błędny parametr min
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -120,6 +255,40 @@ components:
         stock:
           type: integer
           example: 15
+        desc:
+          type: string
+          example: "Mała porcja"
+
+    Cart:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          example: "xyz123"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        createdAt:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        variantId:
+          type: integer
+          example: 4
+        variantSku:
+          type: string
+          example: "BUR-CL-MA"
+        price:
+          type: number
+          format: float
+          example: 19.99
+        quantity:
+          type: integer
+          example: 2
 
     OrderSuccess:
       type: object
@@ -134,6 +303,23 @@ components:
           type: number
           format: float
           example: 45.50
+
+    HighValueOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 52
+        status:
+          type: string
+          example: "PAID"
+        totalAmount:
+          type: number
+          format: float
+          example: 150.00
+        createdAt:
+          type: string
+          format: date-time
 
     AnalyticsResponse:
       type: object
@@ -161,3 +347,6 @@ components:
         error:
           type: string
           example: "Koszyk jest pusty lub nie istnieje."
+        details:
+          type: string
+          example: "Brak dodatkowych szczegółów"

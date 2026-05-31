@@ -92,5 +92,8 @@ async function removeItemFromCart(sessionId, variantSku) {
 
   return getCart(sessionId);
 }
-
-module.exports = { getCart, addItemToCart, removeItemFromCart };
+module.exports = {
+  getCart,
+  addItemToCart,
+  removeItemFromCart,
+};

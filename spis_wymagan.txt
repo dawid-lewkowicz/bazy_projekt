@@ -15,7 +15,7 @@ T6 - Mongoose❌, schematy z walidatorami❌, tablica zagnieżdżona(mam tablic�
 
 T7 - Pipeline✅, endpoint analityczny[analyticsRoutes.js]✅, cały pipeline[analyticsService.js]✅
 
-T8a - Konteneryzacja❌
+T8a - Konteneryzacja✅
 
 T8b - Mikroserwisy❌
 

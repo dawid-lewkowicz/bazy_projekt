@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "npx prisma migrate deploy && node src/db/initDatabase.js && node src/index.js",
     "test": "jest",
     "seed": "node src/db/seeds/seed.js"
   },

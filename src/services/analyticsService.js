@@ -1,4 +1,5 @@
 const { client } = require("../config/mongo");
+const prisma = require("../config/postgres");
 
 async function getActionStats(sessionId) {
   const db = client.db();
@@ -61,4 +62,6 @@ async function getActionStats(sessionId) {
   return await db.collection("event_logs").aggregate(pipeline).toArray();
 }
 
-module.exports = { getActionStats };
+module.exports = {
+  getActionStats,
+};
