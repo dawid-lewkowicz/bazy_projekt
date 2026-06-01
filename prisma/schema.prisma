@@ -35,6 +35,7 @@ model Variant {
   price      Decimal    @db.Decimal(10, 2)
   stock      Int        @default(0) 
   desc       String?
+  opinion    String?
   
   menuItem   MenuItem   @relation(fields: [menuItemId], references: [id])
 }

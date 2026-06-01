@@ -129,7 +129,34 @@ async function getRecentAdditions() {
   return await db.collection("event_logs").aggregate(pipeline).toArray();
 }
 
+// async function getOpinions() {
+//   const db = client.db();
+//   const pipeline = [
+//     { $unwind: "$items" },
+//     { $group: { _id: "$sessionId", sum: { $sum: "$items.quantity" } } },
+//     { $project: { _id: 0, session: "$_id", suma: "$sum" } },
+//   ];
+
+//   return await db.collection("cart_drafts").aggregate(pipeline).toArray();
+// }
+
+async function getOpinions() {
+  const db = client.db();
+  const pipeline = [
+    {
+      $group: {
+        _id: "$action",
+        sum: { $sum: 1 },
+      },
+    },
+    { $project: { _id: 0, action: "$_id", suma: "$sum" } },
+  ];
+
+  return await db.collection("event_logs").aggregate(pipeline).toArray();
+}
+
 module.exports = {
+  getOpinions,
   getRecentAdditions,
   getCalories,
   getUsage,

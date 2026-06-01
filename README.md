@@ -15,11 +15,7 @@ Jest to w pełni funkcjonalne API backendowe dla restauracji, obsługujące prze
 1. **Instalacja zależności:**
 
    ```bash
-   npm install
-   npx prisma migrate dev   # Aktualizuje strukturę bazy relacyjnej
-   npm run seed
-   npm start
-   npm test
+   docker compose up -d
    ```
 
 2. **Działanie projektu**

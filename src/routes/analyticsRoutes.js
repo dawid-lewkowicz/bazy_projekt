@@ -59,4 +59,13 @@ router.get("/get-recent-additions", async (req, res, next) => {
   }
 });
 
+router.get("/get-opinions", async (req, res, next) => {
+  try {
+    const result = await analyticsService.getOpinions();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

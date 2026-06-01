@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ${POSTGRES_DB:-bazy_projekt}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,6 +34,9 @@ services:
     build: .
     ports:
       - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
     env_file:
       - .env
     environment:
@@ -46,7 +49,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    stop_grace_period: 60s
+    stop_grace_period: 20s
     deploy:
       resources:
         limits:
@@ -59,7 +62,7 @@ services:
       [
         "sh",
         "-c",
-        "npx prisma migrate deploy && node src/db/initDatabase.js && exec node src/index.js",
+        "npx prisma generate && npx prisma migrate deploy && node src/db/initDatabase.js && npx nodemon src/index.js",
       ]
 
 volumes:

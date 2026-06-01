@@ -34,4 +34,11 @@ router.get("/desc", async (req, res, next) => {
   }
 });
 
+router.get("/get-cat-size", async (req, res, next) => {
+  const result = await prisma.category.findMany({
+    select: { name: true, _count: { select: { items: true } } },
+  });
+  res.json(result);
+});
+
 module.exports = router;

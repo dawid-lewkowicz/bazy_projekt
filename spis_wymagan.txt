@@ -38,3 +38,6 @@ API: katalog, koszyk finalizacja✅
 Reguły biznesowe✅
 
 Operacja hybrydowa✅
+
+npx cross-env DATABASE_URL="postgresql://postgres:admin1234@localhost:5432/kiosk_db?schema=public" npx prisma migrate dev --name add_opinion_to_variant
+docker compose exec api npx prisma generate
