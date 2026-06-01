@@ -5,10 +5,10 @@ async function main() {
   const categoryCount = await prisma.category.count();
 
   if (categoryCount === 0) {
-    console.log("Baza danych jest pusta, seedowanie domyślnych danych...");
+    console.log("   Baza danych jest pusta, seedowanie domyślnych danych...");
     await seedDatabase();
   } else {
-    console.log("Baza danych już zawiera dane, seed pominięty.");
+    console.log("   Baza danych już zawiera dane, seed pominięty.");
   }
 }
 

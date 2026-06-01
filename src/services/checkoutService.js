@@ -148,4 +148,17 @@ async function processCheckout(sessionId, expectedTotal, idempotencyKey) {
   return order;
 }
 
-module.exports = { processCheckout };
+async function getPaidOrdersReport() {
+  const report = await prisma.order.aggregate({
+    where: { status: "PAID" },
+    _sum: { totalAmount: true },
+    _count: { id: true },
+  });
+
+  return {
+    totalRevenue: Number(report._sum.totalAmount) || 0,
+    totalOrdersCount: report._count.id || 0,
+  };
+}
+
+module.exports = { processCheckout, getPaidOrdersReport };

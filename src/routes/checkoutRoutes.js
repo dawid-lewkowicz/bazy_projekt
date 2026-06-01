@@ -15,20 +15,16 @@ router.post("/:sessionId", async (req, res, next) => {
     );
     res.json({ message: "Zamówienie sfinalizowane pomyślnie!", order });
   } catch (err) {
-    if (err.code === "PRICE_MISMATCH") {
-      return res.status(400).json({ error: err.message, code: err.code });
-    }
-    if (err.message.includes("Koszyk jest pusty")) {
-      return res.status(400).json({ error: err.message });
-    }
-    if (err.message.includes("OVERSELL")) {
-      return res.status(409).json({ error: err.message });
-    }
-    if (err.code === "IDEMPOTENCY_CONFLICT") {
-      return res.status(409).json({ error: err.message, code: err.code });
-    }
     next(err);
   }
 });
 
+router.get("/paid-orders-raport", async (req, res, next) => {
+  try {
+    const result = await checkoutService.getPaidOrdersReport();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 module.exports = router;

@@ -1,7 +1,6 @@
 const prisma = require("../../config/postgres");
 
 async function seedDatabase() {
-  // czyścimy bazę przed seedowaniem
   await prisma.modifier.deleteMany();
   await prisma.variant.deleteMany();
   await prisma.menuItem.deleteMany();

@@ -38,6 +38,3 @@ API: katalog, koszyk finalizacja✅
 Reguły biznesowe✅
 
 Operacja hybrydowa✅
-
-
-Przejść przez wymagania specyficzne dla projektu i przygotować testy w Thunder client itp.

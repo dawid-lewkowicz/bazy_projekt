@@ -5,10 +5,8 @@ const databaseUrl =
   process.env.DATABASE_URL ||
   `postgresql://${process.env.POSTGRES_USER || "user"}:${process.env.POSTGRES_PASSWORD || "password"}@${process.env.POSTGRES_HOST || "localhost"}:${process.env.POSTGRES_PORT || 5432}/${process.env.POSTGRES_DB || "bazy_projekt"}?schema=public`;
 
-console.log("=== INICJALIZACJA PRISMA ===");
 console.log("DATABASE_URL z procesu Dockera:", databaseUrl);
 
-//singleton
 const prismaBase = new PrismaClient({
   datasources: {
     db: {
@@ -17,11 +15,10 @@ const prismaBase = new PrismaClient({
   },
 });
 
-// rozszerzony klient z hookami domenowymi i walidacją
 const prisma = prismaBase.$extends({
   query: {
     variant: {
-      //hook domenowy, sprawdzamy walidację przed zapisem i aktualizacją wariantu
+      //hook domenowy
       async create({ args, query }) {
         // walidacja
         if (args.data.price !== undefined && args.data.price <= 0) {
@@ -59,6 +56,15 @@ const prisma = prismaBase.$extends({
             "Walidacja Domenowa: Cena modyfikatora nie może być ujemna",
           );
         }
+        return query(args);
+      },
+      async update({ args, query }) {
+        if (args.data.price !== undefined && args.data.price <= 0) {
+          throw new Error(
+            "Walidacja Domenowa: Cena nie może zostać zmieniona na 0 lub mniej",
+          );
+        }
+
         return query(args);
       },
     },

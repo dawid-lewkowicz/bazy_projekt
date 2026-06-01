@@ -3,12 +3,9 @@ const prisma = require("../config/postgres");
 
 async function getCart(sessionId) {
   const db = client.db();
-  let cart = await db.collection("cart_drafts").findOne(
-    { sessionId },
-    {
-      projection: { _id: 0 },
-    },
-  );
+  let cart = await db
+    .collection("cart_drafts")
+    .findOne({ sessionId }, { projection: { _id: 0 } });
 
   if (!cart) {
     cart = { sessionId, items: [], createdAt: new Date() };
@@ -40,9 +37,7 @@ async function addItemToCart(sessionId, item) {
       sessionId,
       "items.variantSku": secureItem.variantSku,
     },
-    {
-      $inc: { "items.$.quantity": secureItem.quantity },
-    },
+    { $inc: { "items.$.quantity": secureItem.quantity } },
   );
 
   if (updateResult.matchedCount === 0) {
@@ -92,7 +87,59 @@ async function removeItemFromCart(sessionId, variantSku) {
 
   return getCart(sessionId);
 }
+
+async function globalAvg() {
+  const db = client.db();
+
+  const pipeline = [
+    { $unwind: "$items" },
+    {
+      $group: {
+        _id: "$sessionId",
+        cartSum: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        avg: {
+          $avg: "$cartSum",
+        },
+      },
+    },
+  ];
+
+  const result = await db
+    .collection("cart_drafts")
+    .aggregate(pipeline)
+    .toArray();
+
+  if (result.length === 0) {
+    return 0;
+  }
+
+  return Number(result[0].avg);
+}
+
+async function clearAbandonedCarts() {
+  const db = client.db();
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const result = await db.collection("cart_drafts").deleteMany({
+    createdAt: { $lte: sevenDaysAgo },
+  });
+
+  return {
+    success: true,
+    deletedCount: result.deletedCount,
+  };
+}
+
 module.exports = {
+  clearAbandonedCarts,
+  globalAvg,
   getCart,
   addItemToCart,
   removeItemFromCart,

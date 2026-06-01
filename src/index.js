@@ -31,7 +31,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-// if żeby testy nie odpalały się na portcie 3000
 if (require.main === module) {
   const server = app.listen(PORT, async () => {
     await connectMongo();

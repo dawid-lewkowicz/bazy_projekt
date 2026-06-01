@@ -17,3 +17,6 @@ yarn-error.log
 *.swp
 README.md
 spis_wymagan.txt
+Dockerfile
+docker-compose.yml
+.gitignore

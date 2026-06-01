@@ -5,7 +5,6 @@ async function getActionStats(sessionId) {
   const db = client.db();
   const pipeline = [];
 
-  // dzięki $match baza użyje indeksu zamiast skanować całą kolejcję (indeks złożony)
   if (sessionId) {
     pipeline.push({
       $match: { sessionId: sessionId, action: { $exists: true } },
@@ -16,7 +15,6 @@ async function getActionStats(sessionId) {
   }
 
   pipeline.push(
-    // $lookup -- dołączenie danych z innej kolekcji
     {
       $lookup: {
         from: "cart_drafts",
@@ -26,14 +24,12 @@ async function getActionStats(sessionId) {
       },
     },
     {
-      // spłaszczanie tablicy
       $unwind: {
         path: "$activeCart",
         preserveNullAndEmptyArrays: true, // zostawia logi, nawet jak koszyk jest już usunięty
       },
     },
     {
-      // główna agregacja
       $group: {
         _id: "$action",
         count: { $sum: 1 },
@@ -45,7 +41,6 @@ async function getActionStats(sessionId) {
       },
     },
     {
-      // formatowanie wyjścia
       $project: {
         _id: 0,
         actionType: "$_id",
@@ -62,6 +57,81 @@ async function getActionStats(sessionId) {
   return await db.collection("event_logs").aggregate(pipeline).toArray();
 }
 
+async function getUsage() {
+  const db = client.db();
+
+  const pipeline = [
+    {
+      $group: {
+        _id: { sessionId: "$sessionId", action: "$action" },
+        userActivityCount: { $sum: 1 },
+      },
+    },
+    {
+      $match: {
+        userActivityCount: { $gt: 1 },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.action",
+        sum: { $sum: "$userActivityCount" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        actionType: "$_id",
+        totalEvents: "$sum",
+      },
+    },
+  ];
+
+  return await db.collection("event_logs").aggregate(pipeline).toArray();
+}
+
+async function getCalories() {
+  const calories = await prisma.menuItem.findMany({
+    select: {
+      name: true,
+      calories: true,
+    },
+  });
+
+  return calories;
+}
+
+async function getRecentAdditions() {
+  const db = client.db();
+
+  const oneDayAgo = new Date();
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+  const pipeline = [
+    {
+      $match: {
+        action: "ADD_ITEM",
+        timestamp: { $gte: oneDayAgo },
+      },
+    },
+    { $sort: { timestamp: -1 } },
+    { $limit: 10 },
+    {
+      $project: {
+        _id: 0,
+        sessionId: 1,
+        itemSku: 1,
+        date: "$timestamp",
+      },
+    },
+  ];
+
+  return await db.collection("event_logs").aggregate(pipeline).toArray();
+}
+
 module.exports = {
+  getRecentAdditions,
+  getCalories,
+  getUsage,
   getActionStats,
 };

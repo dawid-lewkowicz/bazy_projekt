@@ -32,4 +32,31 @@ router.get("/orders/high-value", async (req, res, next) => {
   }
 });
 
+router.get("/get-calories", async (req, res, next) => {
+  try {
+    const result = await analyticsService.getCalories();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/get-usage", async (req, res, next) => {
+  try {
+    const result = await analyticsService.getUsage();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/get-recent-additions", async (req, res, next) => {
+  try {
+    const result = await analyticsService.getRecentAdditions();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

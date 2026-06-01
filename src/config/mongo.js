@@ -10,8 +10,9 @@ async function connectMongo() {
   db = client.db();
   console.log(" Połączono z MongoDB Atlas");
 
-  // system MongoDB układa sobie logi alfabetycznie na podstawie numeru sesji, szybkość wyszukiwania drastycznie wzrasta
+  // indeks złożony
   await db.collection("event_logs").createIndex({ sessionId: 1, action: 1 });
+  await db.collection("cart_drafts").createIndex({ sessionId: 1 });
   console.log(" Utworzono indeksy MongoDB");
 
   return db;
